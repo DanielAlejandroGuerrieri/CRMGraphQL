@@ -2,6 +2,8 @@
 const Usuario = require('../models/Usuario');
 const Producto = require('../models/Producto');
 const Cliente = require('../models/Cliente');
+const Pedido = require('../models/Pedido');
+
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PromiseProvider } = require('mongoose');
@@ -69,6 +71,15 @@ const resolvers = {
 
             return cliente;
 
+        },
+        obtenerPedidos: async () => {
+            try {
+                const pedidos = await Pedido.find({});
+                return pedidos;
+
+            } catch (error) {
+                console.log(error);
+            }
         }
     },
     
@@ -214,16 +225,37 @@ const resolvers = {
             if(clienteExiste.vendedor.toString() !== ctx.usuario.id) {
                 throw new Error('No tienes las credenciales');
             }
+
             //Revisar que el stock este disponible
+            for await( const articulo of input.pedido ) {
+                    const { id } = articulo;
+
+                    const producto = await Producto.findById(id);
+                    console.log(producto);
+
+                    if(articulo.cantidad > producto.existencia){
+                        throw new Error(`El articulo: ${producto.nombre} excede la cantidad disponible`);
+                    } else {
+                        //Restar la cantidad de producto disponible
+                        producto.existencia -= articulo.cantidad;
+
+                        await producto.save();
+                    }
+
+            }
+
+            //Crear un nuevo pedido
+            const nuevoPedido = new Pedido(input);
 
             //Asignar un vendedor
-
+            nuevoPedido.vendedor = ctx.usuario.id;
 
             //Guardarlo en la base de datos
-
-
+            const resultado = await nuevoPedido.save();
+            return resultado;
 
         }
+        
     },
     
 }
