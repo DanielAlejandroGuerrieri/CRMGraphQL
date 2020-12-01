@@ -102,6 +102,11 @@ const resolvers = {
             //retornar el resultado
             return pedido;
 
+        },
+        obtenerPedidosEstado: async (_,{estado},ctx) =>{
+            const pedidos = await Pedido.find({ vendedor: ctx.usuario.id , estado});
+
+            return pedidos;
         }
     },
     
@@ -310,13 +315,26 @@ const resolvers = {
                 }
             }
             
-
             //guardar el pedido
             const resultado = await Pedido.findOneAndUpdate({_id: id}, input, {new: true});
             return resultado;
 
 
-        }
+        },
+        eliminarPedido: async (_,{ id }, ctx) => {
+            //verficar si existe
+            let pedido = await Pedido.findById(id);
+            if(!pedido) throw new Error('El pedido no existe');
+
+            //Verificar si el vendedor es quien lo borra
+            if(pedido.vendedor.toString() !== ctx.usuario.id) {
+                throw new Error('No tienes las credenciales');
+            }
+
+            //Eliminar el pedido de la base de datos
+            await Pedido.findByIdAndDelete({_id: id });
+            return "Pedido Eliminado";
+        } 
         
     },
     
